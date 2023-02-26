@@ -1,0 +1,146 @@
+_realname=libjudy
+pkgbase=${_realname}
+pkgname=('libjudy' 'libjudy-devel')
+#("${MINGW_PACKAGE_PREFIX}-${_realname}")
+_basever=1.0.5
+_patchlevel=xxxxxx
+pkgver=ci
+#${_basever}.${_patchlevel}
+pkgrel=1
+pkgdesc="Judy - C library creating and accessing dynamic arrays"
+arch=('any')
+url="https://sourceforge.net/projects/judy/"
+license=('LGPL-2.1-or-later')
+depends=(
+)
+makedepends=(
+  'autotools'
+  'gcc'
+)
+
+prepare() {
+  set | egrep "^\S+="
+  pwd
+  ls -la
+  echo "srcdir=$srcdir"
+
+  # MSYS2/build
+  cd ../../..
+  pwd
+
+  ./bootstrap
+}
+
+build() {
+  pwd
+  cd "$srcdir"
+  pwd
+
+
+  mkdir -p ${srcdir}/build-default-${MSYSTEM} && cd ${srcdir}/build-default-${MSYSTEM}
+
+  ../../../../configure \
+    --prefix=/usr \
+    --host=${MINGW_CHOST} \
+    --build=${MINGW_CHOST}
+
+  make
+
+  make check
+
+  make DESTDIR=${srcdir}/build-default-install install
+
+
+  echo "#### PREPROCESSOR"
+  pwd
+  cd src/JudyL
+  pwd
+  bit=$(echo $MSYSTEM | sed -e 's/MINGW//i')
+  echo $bit
+  ls -lad    ../../../../../../src/JudyL/
+  ls -lad    ../../../../../../src/JudyL/..
+  ls -lad    ../../../../../../src/JudyL/../JudyCommon/
+  echo gcc -I../../../../../../src/JudyL/ -I../../../../../../src/JudyL/.. -I../../../../../../src/JudyL/../JudyCommon/ -DJUDYL -g -O2 -DJU_${bit}BIT -dM -E JudyLTablesGen.c
+  gcc -I../../../../../../src/JudyL/ -I../../../../../../src/JudyL/.. -I../../../../../../src/JudyL/../JudyCommon/ -DJUDYL -g -O2 -DJU_${bit}BIT -dM -E JudyLTablesGen.c
+  echo "#### PREPROCESSOR"
+
+  # CI diag
+  ls -laR ${srcdir}/build-default-install
+  find ${srcdir}/build-default-install
+
+
+  mkdir -p ${srcdir}/build-static-${MSYSTEM} && cd ${srcdir}/build-static-${MSYSTEM}
+
+  ../../../../configure \
+    --prefix=/usr \
+    --host=${MINGW_CHOST} \
+    --build=${MINGW_CHOST} \
+    --enable-static \
+    --disable-shared
+
+  make
+
+  make check
+
+  make DESTDIR=${srcdir}/build-static-install install
+
+  # CI diag
+  ls -laR ${srcdir}/build-static-install
+  find ${srcdir}/build-static-install
+
+
+  mkdir -p ${srcdir}/build-shared-${MSYSTEM} && cd ${srcdir}/build-shared-${MSYSTEM}
+
+  LDFLAGS="-Wl,-no-undefined" ../../../../configure \
+    --prefix=/usr \
+    --host=${MINGW_CHOST} \
+    --build=${MINGW_CHOST} \
+    --disable-static \
+    --enable-shared
+  sed -i.bak -e "s/\(allow_undefined=\)yes/\1no/" libtool
+  diff -u libtool.bak libtool || true
+
+  make
+
+  make check
+
+  make DESTDIR=${srcdir}/build-shared-install install
+
+  # CI diag
+  ls -laR ${srcdir}/build-shared-install
+  find ${srcdir}/build-shared-install
+}
+
+package_libjudy() {
+  groups=('libraries')
+
+  mkdir -p ${pkgdir}/usr
+  cp -rf ${srcdir}/build-shared-install/usr/bin ${pkgdir}/usr/
+  cp -rf ${srcdir}/build-shared-install/usr/lib ${pkgdir}/usr/
+
+  pwd
+  ls -l
+  echo pkgdir=$pkgdir
+  ls -lad ${pkgdir}
+  ls -laR ${pkgdir}
+  find ${pkgdir}
+}
+
+package_libjudy-devel() {
+  groups=('development')
+  options=('staticlibs')
+  depends=("libjudy=${pkgver}")
+  pkgdesc="judy header and libraries"
+
+  mkdir -p ${pkgdir}/usr
+  cp -rf -p ${srcdir}/build-static-install/usr/include ${pkgdir}/usr/
+  cp -rf -p ${srcdir}/build-static-install/usr/lib ${pkgdir}/usr/
+  cp -rf -p ${srcdir}/build-static-install/usr/share ${pkgdir}/usr/
+
+  pwd
+  ls -l
+  echo pkgdir=$pkgdir
+  ls -lad ${pkgdir}
+  ls -laR ${pkgdir}
+  find ${pkgdir}
+}

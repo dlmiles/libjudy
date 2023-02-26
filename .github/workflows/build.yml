@@ -1,0 +1,63 @@
+name: 'build'
+
+on:
+  push:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+
+  msys2:
+    runs-on: windows-latest
+    strategy:
+        fail-fast: false
+        max-parallel: 2
+        matrix:
+          target: [
+            { msys2: MINGW32, arch: i686 },
+            { msys2: MINGW64, arch: x86_64}
+          ]
+    continue-on-error: true
+    defaults:
+      run:
+        shell: msys2 {0}
+    env:
+      MINGW_INSTALLS: ${{ matrix.target.msys2 }}
+    steps:
+
+    - run: git config --global core.autocrlf input
+      shell: bash
+
+    - uses: actions/checkout@v3
+
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >
+          base-devel
+          git
+          mingw-w64-${{ matrix.target.arch }}-toolchain
+        msystem: ${{ matrix.target.msys2 }}
+
+    - name: Build package
+      working-directory: MSYS2/build
+      run: |
+        makepkg-mingw --noconfirm --noprogressbar -sCLfc && exit 0
+
+    - name: Install
+      working-directory: MSYS2/build
+      run: |
+        pwd
+        ls -la
+        ls -la ..
+        ls -la ../..
+        cp *.pkg.tar.zst ../../
+
+    - uses: actions/upload-artifact@v3
+      with:
+        path: |
+          libjudy*
+          libJudy*
+          *.pkg.tar.zst
+          MSYS2/build/*.zst
+
