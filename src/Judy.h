@@ -90,8 +90,38 @@ typedef void ** PPvoid_t;
 #endif
 
 #ifndef _WORD_T
-#define _WORD_T
-typedef unsigned long    Word_t, * PWord_t;  // expect 32-bit or 64-bit words.
+ #if ((defined(__MINGW64__) || defined(__MINGW32__)) && defined(__UINTPTR_TYPE__))
+ // WIN64 model is llp64 and GCC provides a preprocessor to help out here
+ // The build also expects to have UINTPTR_C() cast where UL or ULL suffix is need.
+ // The build also expects to have INTPTR_C() cast where L or LL suffix is need.
+ #define _WORD_T
+ typedef __UINTPTR_TYPE__ Word_t, * PWord_t;  // expect 32-bit or 64-bit words.
+ #if (INTPTR_MAX == INT32_MAX)
+  #define INTPTR_C(val) val ##L
+ #elif (INTPTR_MAX == INT64_MAX)
+  #define INTPTR_C(val) val ##LL
+ #else
+  #define INTPTR_C(val) val ##L
+  #error "INTPTR_C()"
+ #endif
+ #if (UINTPTR_MAX == UINT32_MAX)
+  #define UINTPTR_C(val) val ##UL
+ #elif (UINTPTR_MAX == UINT64_MAX)
+  #define UINTPTR_C(val) val ##ULL
+ #else
+  #define UINTPTR_C(val) val ##UL
+  #error "UINTPTR_C()"
+ #endif
+#else
+ #define _WORD_T
+  typedef unsigned long    Word_t, * PWord_t;  // expect 32-bit or 64-bit words.
+ #endif
+ #ifndef INTPTR_C
+  #define INTPTR_C(val) val ##L
+ #endif
+ #ifndef UINTPTR_C
+  #define UINTPTR_C(val) val ##UL
+ #endif
 #endif
 
 #ifndef NULL
@@ -201,8 +231,8 @@ typedef struct J_UDY_ERROR_STRUCT
 // warning.
 
 #define   JERR (-1)                     /* functions returning int or Word_t */
-#define  PJERR ((Pvoid_t)  (~0UL))      /* mainly for use here, see below    */
-#define PPJERR ((PPvoid_t) (~0UL))      /* functions that return PPvoid_t    */
+#define  PJERR ((Pvoid_t)  (UINTPTR_C(~0)))      /* mainly for use here, see below    */
+#define PPJERR ((PPvoid_t) (UINTPTR_C(~0)))      /* functions that return PPvoid_t    */
 
 // Convenience macro for when detailed error information (PJError_t) is not
 // desired by the caller; a purposely short name:
