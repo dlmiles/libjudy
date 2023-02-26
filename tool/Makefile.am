@@ -1,4 +1,4 @@
-INCLUDES =  -I. 
+INCLUDES =  -I@srcdir@
 AM_CFLAGS = @CFLAGS@ @WARN_CFLAGS@
 
 noinst_PROGRAMS = jhton

@@ -2,7 +2,7 @@ AM_CFLAGS = @WARN_CFLAGS@
 
 CLEANFILES = libJudy.la
 
-include_HEADERS = ../Judy.h
+include_HEADERS = @srcdir@/../Judy.h
 
 lib_LTLIBRARIES = libJudy.la
 
